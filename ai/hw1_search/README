@@ -1,0 +1,9 @@
+Group Members: Josh Cai
+Source files: search.cpp
+Platform: Mac OS X
+Problems: None, although some of my results may not match sample program due to order of generated successors
+How to run: 
+compile with
+	g++ -o search search.cpp
+run with
+	./search [-cost] <BFS|DFS|UCS|GS|A-star|HCS|SA> <inputfile>
