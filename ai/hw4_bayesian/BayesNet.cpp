@@ -2,7 +2,7 @@
 // Josh Cai 
 
 // compile with: 
-//   g++ -o resolution resolution.cpp
+//   g++ -o BayesNet BayesNet.cpp
 // run with:
 //   ./BayesNet <bayesnet> <enum|elim> <query>
 
@@ -33,19 +33,15 @@ struct var
 
 struct factor
 {
-	// vector<map<char,char> > mapping;
-	// vector<double> prob;
-
-	//alternative
-	vector<char> vars;
-	map<string, double> p;
+	vector<char> vars; // holds vars in this factor
+	map<string, double> p; // same as var.p but for factor
 };
 
 static const struct var emptyVar; // to reset struct
 static const struct factor emptyFactor; // to reset struct
 vector<var> net; // holds the bayes net
 map<char, int>  ind; // map of char to index of array
-char val[2];
+char val[2]; // holds 'f' and 't'
 
 double calc(char v, map<char,char> e)
 {
@@ -120,7 +116,7 @@ double enum_all(vector<char> vars, map<char,char> e)
 
 
 	double sum = 0.0;
-	if(e.find(next) == e.end()) //not found
+	if(e.find(next) == e.end()) //not found in e (hidden var)
 	{
 		for(int i = 0; i < 2; i ++)
 		{
@@ -143,12 +139,19 @@ void print_result(char a, string replace)
 	temp+= replace.substr(0,3);
 	temp+= " = "; 
 	temp+= a;
-	temp+= " ";
-	for(int i = 3; i < replace.length(); i++)
+	if(replace.length() != 4)
 	{
-		temp+= replace[i];
-		if(i < replace.length() - 1 && replace[i+1]!= ',' && replace[i+1]!=')')
-			temp+= " ";
+		temp+= " ";
+		for(int i = 3; i < replace.length(); i++)
+		{
+			temp+= replace[i];
+			if(i < replace.length() - 1 && replace[i+1]!= ',' && replace[i+1]!=')')
+				temp+= " ";
+		}
+	}
+	else
+	{
+		temp+=" | )";
 	}
 	cout << temp << " = ";
 }
@@ -172,9 +175,6 @@ void recurse(map<string, double> & p, string assignment, vector<char> v, map<cha
 				b_q[num_b[v[i]]] = assignment[i];
 			}
 		}
-		cout << "     assigning "  << assignment << endl;
-		cout << "           a_q " << a_q << " " << a_p[a_q] << endl;
-		cout << "           b_q " << b_q << " " << b_p[b_q] << endl;
 		prob *= a_p[a_q];
 		prob *= b_p[b_q];
 		p[assignment] = prob;
@@ -187,7 +187,7 @@ void recurse(map<string, double> & p, string assignment, vector<char> v, map<cha
 	}
 }
 
-factor multiply(factor a, factor b)
+factor multiply(factor a, factor b) // generates new factor that is the pointwise product of two factors
 {
 	if(b.vars.size() == 0)
 		return a;
@@ -236,7 +236,7 @@ factor real_sum_out(factor a, char next)
 	string temp, q1, q2;
 	for(it = a.p.begin(); it != a.p.end(); ++it)
 	{
-		string temp = it->first;
+		temp = it->first;
 		temp.erase(x,1);
 		if(b.p.find(temp) == b.p.end()) // prob not in b.p yet
 		{
@@ -259,36 +259,28 @@ vector<factor> sum_out(char next, vector<factor> factors)
 	{
 		if(find(factors[i].vars.begin(), factors[i].vars.end(), next) != factors[i].vars.end()) // var is in this factor
 		{
-			cout << " mutliplying factor " << i << endl;
-			for(int j = 0; j < product.vars.size(); j++)
-			{
-				cout << product.vars[j] << " ";
-			}
-			cout << endl;
 			product = multiply(product, factors[i]);
-
 		}
 		else
 		{
 			new_factors.push_back(factors[i]);
-			cout << "pushed back " << i << endl;
 		}
 	}
 	new_factors.push_back(real_sum_out(product, next));
 	return new_factors;
 }
 
-void print_factor(factor a)
+void print_factor(factor a) // prints out factor in pretty form
 {
-	for(int i = 0; i < a.vars.size(); i ++)
-	{
-		cout << a.vars[i] << " ";
-	}
-	cout << endl;
 	map<string,double>::iterator it;
 	for(it = a.p.begin(); it != a.p.end(); ++it)
 	{
-		cout << it->first << " = " << it->second << endl;
+		for(int i = 0; i < it->first.length(); i ++)
+		{
+			cout << a.vars[i] << "=" << it->first[i];
+		}
+
+		cout << ":  " << it->second << endl;
 	}
 }
 
@@ -317,12 +309,6 @@ int main(int argc, char* argv[])
 		stringstream ss;
 		string temp, temp2;
 		double temp_d;
-
-
-		// for(int i = 0; i < observed.size(); i ++)
-		// {
-		// 	cout << observed[i].first << " " << observed[i].second << endl;
-		// }
 
 		// parse file
 		while(!fin.eof())
@@ -379,21 +365,15 @@ int main(int argc, char* argv[])
 		}
 
 		// parse query
-		temp = string(argv[3]);
-		q = temp[2];
+		string query;
+		query = string(argv[3]);
+		q = query[2];
 		int i = 4;
-		while(i < temp.length())
+		while(i < query.length())
 		{
-			observed[temp[i]] =  temp[i+2];
+			observed[query[i]] =  query[i+2];
 			i+=4;
 		}
-		// debug code
-		// cout << q << endl << endl;
-		// map<char,char>::iterator it2;
-		// for(it2 = observed.begin(); it2 != observed.end(); ++it2)
-		// 	{
-		// 		cout << it2->first << "  " << it2->second << endl;
-		// 	}
 
 		// set ups intial vars to get passed in
 		vector<char> vars;
@@ -401,6 +381,8 @@ int main(int argc, char* argv[])
 		{
 			vars.push_back(net[i].name);
 		}
+		double Q[2];
+		double s;
 
 		if(elim) //elimination-ask algorithm
 		{	
@@ -411,8 +393,9 @@ int main(int argc, char* argv[])
 			int size, x;
 			vector<factor> factors;
 			factor temp_factor;
-			while(vars.size()>0)
+			while(vars.size()>0) // since variables are getting eliminated, it will eventually be zero
 			{
+				// code to find the next variable to be eliminated
 				min = -1;
 				for(int i = 0; i < vars.size(); i++)
 				{
@@ -431,7 +414,6 @@ int main(int argc, char* argv[])
 					}
 					if(flag)
 					{
-						// cout << "YAY " << i << vars[i] << endl;
 						size = net[ind[vars[i]]].parents.size();
 						if(observed.find(vars[i]) == observed.end()) // not found in observed, so add 1
 							size++;
@@ -450,8 +432,8 @@ int main(int argc, char* argv[])
 
 				map<char,int>::iterator it2 = avail.begin();
 				x = it2->second; // gets index of where it was in the vars array
-				next = vars[x];
-				vars.erase(vars.begin()+x, vars.begin()+x+1);
+				next = vars[x]; // gets actual character
+				vars.erase(vars.begin()+x, vars.begin()+x+1); // deletes next var to be eliminated from vars vector
 
 				temp_factor = emptyFactor;
 				if(observed.find(next) == observed.end()) // not found in observed
@@ -460,7 +442,7 @@ int main(int argc, char* argv[])
 					{
 						temp_factor.vars.push_back(net[ind[next]].parents[i]);
 					}
-					temp_factor.vars.push_back(next);
+					temp_factor.vars.push_back(next); // since own var wasn't listed in parents
 					map<string,double>::iterator temp_it;
 					for(temp_it = net[ind[next]].p.begin(); temp_it!= net[ind[next]].p.end(); ++temp_it)
 					{
@@ -472,7 +454,7 @@ int main(int argc, char* argv[])
 						factors = sum_out(next, factors);
 					}
 				}
-				else
+				else // found in observed, need to delete one from the vars
 				{
 					for(int i = 0; i < net[ind[next]].parents.size(); i++)
 					{
@@ -488,113 +470,50 @@ int main(int argc, char* argv[])
 					}
 					factors.push_back(temp_factor);
 				}
-				cout << "----- " << next << endl << "Factors: " << endl;
+
+				cout << "----- Variable: " << next << " -----" << endl << "Factors: " << endl;
 				for(int i = 0; i < factors.size(); i ++)
 				{
 					print_factor(factors[i]);
 					cout << endl;
 				}
-				// for(int i = 0; i < temp_factor.vars.size(); i++)
-				// {
-				// 	cout << temp_factor.vars[i] << " ";
-				// }
-				// cout << endl;
-				// map<string,double>::iterator temp_it;
-				// for(int)
-				// for(temp_it = temp_factor.p.begin(); temp_it != temp_factor.p.end(); ++temp_it)
-				// {
-				// 	cout << temp_it->first <<" " << temp_it->second << endl;
-				// }
-
 			}
-			// double Q[2];
-			// Q[0] = 1.0;
-			// Q[1] = 1.0;
-			// double s;
-			// for(int i = 0; i < factors.size(); i ++)
-			// {
-			// 	for(int j = 0; j < 2; j ++)
-			// 	{
-			// 		string t="";
-			// 		t+=val[i];
-			// 		Q[j] *= factors[i].p[t];
-			// 	}
-			// }
-			// for(int i = 0; i < 2; i ++)
-			// {
-			// 	s += Q[i];
-			// }
-			// for(int i = 0; i < 2; i++)
-			// {
-			// 	Q[i]/=s;
-			// 	cout << Q[i] << endl;
-			// }
-			factor final;
-			final = factors[0];
+
+			// compute final factor
+			temp_factor = factors[0];
 			for(int i = 1; i < factors.size(); i ++)
 			{
-				final = multiply(final, factors[i]);
-			}
-			double s;
-			map<string, double>::iterator final_it;
-			for(final_it = final.p.begin(); final_it != final.p.end(); ++final_it)
-			{
-				s+= final_it->second;
-			}
-			for(final_it = final.p.begin(); final_it != final.p.end(); ++final_it)
-			{
-				cout << final_it->second / s << endl; 
-				// s+= final_it->second;
+				temp_factor = multiply(temp_factor, factors[i]);
 			}
 
-			// for(int i = 1; i < final.vars.size(); i ++)
-
+			for(int i = 0; i < 2; i++)
+			{
+				temp = "";
+				temp+= val[i];
+				Q[i] = temp_factor.p[temp];
+				s+= Q[i];
+			}
 
 		}
 		else //enumeration-ask algorithm
 		{
-			double Q[2];
-			double s;
-
-
 			for(int i = 0; i < 2; i++)
 			{
 				observed[q] = val[i];
 				Q[i] = enum_all(vars, observed);
 				s+= Q[i];
 			}
-			// normalization
-			cout << endl << "RESULT:" << endl;
-			for(int i = 0; i < 2; i ++)
-			{
-				Q[i]/=s;
-				// cout << "P(" << q << " = " << val[i] << " | ";
-				// for(int j = 0; j < observed.)
-				print_result(val[i], temp);
-				printf("%.16f\n", Q[i]);
-				// cout << setprecision(16) << Q[i] << endl;
-			}
+			cout << endl;
 		}
 
-
-
-
-
-		// debug network
-		// map<string,double>::iterator it;
-		// for(int i = 0; i < net.size(); i ++)
-		// {
-		// 	cout << net[i].name << endl;
-		// 	for(int j = 0; j < net[i].parents.size(); j++)
-		// 		cout << net[i].parents[j] << " ";
-		// 	cout << endl;
-		// 	for(it = net[i].p.begin(); it != net[i].p.end(); ++it)
-		// 	{
-		// 		cout << it->first << "  " << it->second << endl;
-		// 	}
-
-		// }
-
+		// normalization (same for both algorithms)
+		cout << "RESULT:" << endl;
+		for(int i = 0; i < 2; i ++)
+		{
+			Q[i]/=s;
+			print_result(val[i], query);
+			printf("%.16f\n", Q[i]);
+		}
 
 	}
 	return 0;
