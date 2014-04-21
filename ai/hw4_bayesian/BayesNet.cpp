@@ -266,7 +266,12 @@ vector<factor> sum_out(char next, vector<factor> factors)
 			new_factors.push_back(factors[i]);
 		}
 	}
-	new_factors.push_back(real_sum_out(product, next));
+	factor temp_f;
+	temp_f = real_sum_out(product, next);
+	if(temp_f.vars.size() > 0)
+	{
+		new_factors.push_back(temp_f);
+	}
 	return new_factors;
 }
 
@@ -278,6 +283,8 @@ void print_factor(factor a) // prints out factor in pretty form
 		for(int i = 0; i < it->first.length(); i ++)
 		{
 			cout << a.vars[i] << "=" << it->first[i];
+			if(i < it->first.length() - 1)
+				cout << " ";
 		}
 
 		cout << ":  " << it->second << endl;
@@ -435,41 +442,67 @@ int main(int argc, char* argv[])
 				next = vars[x]; // gets actual character
 				vars.erase(vars.begin()+x, vars.begin()+x+1); // deletes next var to be eliminated from vars vector
 
+				// creating new factor
 				temp_factor = emptyFactor;
-				if(observed.find(next) == observed.end()) // not found in observed
+
+				// finding which vars belong in the factor
+				// over the parents of next
+				for(int i = 0; i < net[ind[next]].parents.size(); i++)
 				{
-					for(int i = 0; i < net[ind[next]].parents.size(); i++)
+					if(observed.find(net[ind[next]].parents[i]) == observed.end())
 					{
 						temp_factor.vars.push_back(net[ind[next]].parents[i]);
-					}
-					temp_factor.vars.push_back(next); // since own var wasn't listed in parents
-					map<string,double>::iterator temp_it;
-					for(temp_it = net[ind[next]].p.begin(); temp_it!= net[ind[next]].p.end(); ++temp_it)
-					{
-						temp_factor.p[temp_it->first] = temp_it->second;
-					}
-					factors.push_back(temp_factor);
-					if(next!=q) // hidden variable
-					{
-						factors = sum_out(next, factors);
 					}
 				}
-				else // found in observed, need to delete one from the vars
+				if(observed.find(next) == observed.end()) // not observed
 				{
-					for(int i = 0; i < net[ind[next]].parents.size(); i++)
+					temp_factor.vars.push_back(next);
+				}
+
+				// finding which probabilities to put in the factor
+
+				map<string,double>::iterator temp_it;
+				// over the query values of next
+				for(temp_it = net[ind[next]].p.begin(); temp_it!= net[ind[next]].p.end(); ++temp_it)
+				{
+					flag = true;
+					temp = "";
+					// over the parents 
+					for(int i = 0; i < temp_it->first.length() - 1; i ++)
 					{
-						temp_factor.vars.push_back(net[ind[next]].parents[i]);
-					}
-					map<string,double>::iterator temp_it;
-					for(temp_it = net[ind[next]].p.begin(); temp_it!= net[ind[next]].p.end(); ++temp_it)
-					{
-						if(temp_it->first[temp_it->first.length()-1] == observed[next])
+						if(observed.find(net[ind[next]].parents[i]) == observed.end())
 						{
-							temp_factor.p[temp_it->first.substr(0,temp_it->first.length()-1)] = temp_it->second;
+							temp+=temp_it->first[i];
+							continue;
+						}
+						if(temp_it->first[i] != observed[net[ind[next]].parents[i]])
+						{
+							flag = false;
+							break;
 						}
 					}
+					if(observed.find(next) == observed.end()) // not observed
+					{
+						temp+=temp_it->first[temp_it->first.length() - 1];
+					}
+					else if(temp_it->first[temp_it->first.length() - 1] != observed[next])
+					{
+						flag = false;
+					}
+					if(flag)
+					{
+						temp_factor.p[temp] = temp_it->second;
+					}
+				}
+				if(temp_factor.vars.size() > 0)
+				{
 					factors.push_back(temp_factor);
 				}
+				if(next!=q && observed.find(next) == observed.end()) // hidden variable
+				{
+					factors = sum_out(next, factors);
+				}
+
 
 				cout << "----- Variable: " << next << " -----" << endl << "Factors: " << endl;
 				for(int i = 0; i < factors.size(); i ++)
