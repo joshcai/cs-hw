@@ -20,6 +20,7 @@
 
 using namespace std;
 
+// holds each var and the probabilites associated
 struct var
 {
 	char name;
@@ -31,6 +32,7 @@ struct var
 	// and "F" will give probability of ~P(name) 
 };
 
+// holds each factor for var elimination
 struct factor
 {
 	vector<char> vars; // holds vars in this factor
@@ -43,6 +45,7 @@ vector<var> net; // holds the bayes net
 map<char, int>  ind; // map of char to index of array
 char val[2]; // holds 'f' and 't'
 
+// finds prob for var v given a map from Var to t/f 
 double calc(char v, map<char,char> e)
 {
 	string t = ""; 
@@ -55,6 +58,7 @@ double calc(char v, map<char,char> e)
 	return net[v2].p[t];
 }
 
+// prints individual step for var enumeration algorithm
 void print_step(vector<char> vars, map<char,char> e, double value)
 {
 	string temp;
@@ -78,6 +82,7 @@ void print_step(vector<char> vars, map<char,char> e, double value)
 	printf("%.8f\n", value);
 }
 
+// enumeration-all method in var enumeration algorithm
 double enum_all(vector<char> vars, map<char,char> e)
 {
 	vector<char> vars_old = vars;
@@ -133,6 +138,7 @@ double enum_all(vector<char> vars, map<char,char> e)
 
 }
 
+// prints final result
 void print_result(char a, string replace)
 {
 	string temp = "";
@@ -156,6 +162,7 @@ void print_result(char a, string replace)
 	cout << temp << " = ";
 }
 
+// generates assignments of t/f's and then puts it into the prob table p
 void recurse(map<string, double> & p, string assignment, vector<char> v, map<char,int> num_a, map<char,int> num_b, map<string, double> a_p, map<string, double> b_p)
 {
 	if(assignment.length() == v.size())
@@ -187,6 +194,7 @@ void recurse(map<string, double> & p, string assignment, vector<char> v, map<cha
 	}
 }
 
+// multiples two factors together
 factor multiply(factor a, factor b) // generates new factor that is the pointwise product of two factors
 {
 	if(b.vars.size() == 0)
@@ -217,6 +225,7 @@ factor multiply(factor a, factor b) // generates new factor that is the pointwis
 
 }
 
+// sums out a factor (eliminates a variable)
 factor real_sum_out(factor a, char next)
 {
 	factor b;
@@ -251,6 +260,7 @@ factor real_sum_out(factor a, char next)
 	return b;
 }
 
+// first finds the product of all factors containing 'next' and then sums it out with real_sum_out
 vector<factor> sum_out(char next, vector<factor> factors)
 {
 	factor product;
@@ -275,6 +285,7 @@ vector<factor> sum_out(char next, vector<factor> factors)
 	return new_factors;
 }
 
+// prints an individual factor
 void print_factor(factor a) // prints out factor in pretty form
 {
 	map<string,double>::iterator it;
