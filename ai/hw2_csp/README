@@ -1,0 +1,8 @@
+Group Members: Josh Cai
+Source files: cspsolver.cpp
+Platform: Mac OS X
+How to run: 
+compile with
+	g++ -o cspsolver cspsolver.cpp
+run with
+	./cspsolver [file1.var] [file2.con] [none|fc]
