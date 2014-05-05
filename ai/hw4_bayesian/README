@@ -1,0 +1,8 @@
+Group Members: Josh Cai
+Source files: BayesNet.cpp
+Platform: Mac OS X
+How to run: 
+compile with
+	g++ -o BayesNet BayesNet.cpp
+run with
+	./BayesNet <bayesnet> <enum|elim> <query> 
