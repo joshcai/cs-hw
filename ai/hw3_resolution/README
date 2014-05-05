@@ -1,0 +1,8 @@
+Group Members: Josh Cai
+Source files: resolution.cpp
+Platform: Mac OS X
+How to run: 
+compile with
+	g++ -o resolution resolution.cpp
+run with
+	./resolution [input_file] 
